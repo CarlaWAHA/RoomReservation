@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "Gwsfq2O3ZMo=",
+  "success": true,
+  "projectFilePath": "/Users/nico/Documents/web/cours/web full stack/RoomBookingApi/RoomBookingApi.csproj",
+  "expectedPackageFiles": [
+    "/Users/nico/.nuget/packages/microsoft.aspnetcore.openapi/9.0.0/microsoft.aspnetcore.openapi.9.0.0.nupkg.sha512",
+    "/Users/nico/.nuget/packages/microsoft.openapi/1.6.17/microsoft.openapi.1.6.17.nupkg.sha512"
+  ],
+  "logs": []
+}
