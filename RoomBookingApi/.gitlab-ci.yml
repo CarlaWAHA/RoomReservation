@@ -1,0 +1,30 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+
+build:
+  stage: build
+  script:
+    - echo "Building the Docker image..."
+    - docker build -t mon-image .
+
+test:
+  stage: test
+  script:
+    - echo "Running tests..."
+    - docker run mon-image echo "Test Passed!"
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Deployment step..."
+    - docker run -d --name mon-conteneur mon-image
