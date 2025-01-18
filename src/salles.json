@@ -1,0 +1,35 @@
+[
+  {
+    "id": "f52c",
+    "nom": "salle 01",
+    "groupe": "Présentation",
+    "capacite": 30,
+    "superficie": 60,
+    "accessible": true,
+    "intex": ["interieur"],
+    "emplacement": "rez de chaussé",
+    "photo": "https://placecats.com/neo/300/200"
+  },
+  {
+    "id": "a38b",
+    "nom": "salle 02",
+    "groupe": "Réunion",
+    "capacite": 10,
+    "superficie": 20,
+    "accessible": false,
+    "intex": ["interieur", "exterieur"],
+    "emplacement": "premier étage",
+    "photo": "https://placecats.com/bella/300/200"
+  },
+  {
+    "id": "532c",
+    "nom": "salle 03",
+    "groupe": "Evenement",
+    "capacite": 50,
+    "superficie": 70,
+    "accessible": false,
+    "intex": ["interieur"],
+    "emplacement": "premier étage",
+    "photo": "https://placecats.com/millie/300/200"
+  }
+]
