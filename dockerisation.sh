@@ -1,10 +1,8 @@
-mkdir Docker
 cd .\src
 cd .\Docker
 docker build -t hello-docker .
 docker images
 docker run hello-docker
-mkdir data
 cd .\data
 echo. > index.html
 echo ^<html^>^<head^>^<title^>Hello^</title^>^</head^>^<body^>^<h1^>Hello, World!^</h1^>^</body^>^</html^> > index.html
