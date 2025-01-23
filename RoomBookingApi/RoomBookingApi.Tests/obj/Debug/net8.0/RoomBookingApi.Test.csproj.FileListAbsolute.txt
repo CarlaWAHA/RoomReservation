@@ -1,0 +1,13 @@
+C:\Users\cawaha\RoomBookingApi\RoomBookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.csproj.AssemblyReference.cache
+C:\Users\cawaha\RoomBookingApi\RoomBookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\cawaha\RoomBookingApi\RoomBookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.AssemblyInfoInputs.cache
+C:\Users\cawaha\RoomBookingApi\RoomBookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.AssemblyInfo.cs
+C:\Users\cawaha\RoomBookingApi\RoomBookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.csproj.CoreCompileInputs.cache
+C:\Users\cawaha\RoomBookingApi\RoomBookingApi.Tests\obj\Debug\net8.0\MvcTestingAppManifest.json
+C:\Users\PC\Downloads\RoomReservation\RoombookingApi\RoombookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.csproj.AssemblyReference.cache
+C:\Users\PC\Downloads\RoomReservation\RoombookingApi\RoombookingApi.Tests\obj\Debug\net8.0\MvcTestingAppManifest.json
+C:\Users\PC\Downloads\RoomReservation\RoombookingApi\RoombookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\PC\Downloads\RoomReservation\RoombookingApi\RoombookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.AssemblyInfoInputs.cache
+C:\Users\PC\Downloads\RoomReservation\RoombookingApi\RoombookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.AssemblyInfo.cs
+C:\Users\PC\Downloads\RoomReservation\RoombookingApi\RoombookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.csproj.CoreCompileInputs.cache
+C:\Users\PC\Downloads\RoomReservation\RoombookingApi\RoombookingApi.Tests\obj\Debug\net8.0\RoomBookingApi.Test.sourcelink.json

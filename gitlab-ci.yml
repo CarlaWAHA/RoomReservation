@@ -1,0 +1,32 @@
+stages:
+    -lint
+    -build
+    -test
+
+lint:
+    stage:lint
+    script:
+    -echo "Running linting..."
+    -dotnet format --verify-no-changes
+    
+    only:
+        -main
+
+build:
+    stage: build
+    script:
+        -echo "Building the projet..."
+        -dotnet build
+    only:
+        -main
+    needs:
+        -lint
+test:
+    stage: test
+    script:
+        -echo "Running tests..."
+        -dotnet test
+    only:
+        -main
+    needs:
+        - build
