@@ -8,43 +8,65 @@
       <div class="layout">
         <!-- Formulaire à gauche -->
         <div class="form-container">
-          <h2>{{ isEditing ? 'Modifier la réservation' : 'Créer une réservation' }}</h2>
-          <form @submit.prevent="isEditing ? updateReservation() : addToUnscheduled()">
+          <h2>
+            {{
+              isEditing ? 'Modifier la réservation' : 'Créer une réservation'
+            }}
+          </h2>
+          <form
+            @submit.prevent="
+              isEditing ? updateReservation() : addToUnscheduled()
+            "
+          >
             <div class="form-group">
               <label>Titre</label>
-              <input 
-                type="text" 
-                v-model="newReservation.title" 
+              <input
+                type="text"
+                v-model="newReservation.title"
                 placeholder="Nom de la réservation"
                 required
-              >
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Date</label>
+              <VueDatePicker
+                v-model="newReservation.date"
+                :enable-time-picker="false"
+                auto-apply
+                locale="fr"
+                :min-date="new Date()"
+                format="dd/MM/yyyy"
+                placeholder="Sélectionner une date"
+                required
+              />
             </div>
 
             <div class="form-group">
               <label>Heure de début</label>
-              <input 
-                type="time" 
+              <input
+                type="time"
                 v-model="newReservation.start"
                 min="08:00"
                 max="18:00"
                 required
-              >
+              />
             </div>
 
             <div class="form-group">
               <label>Heure de fin</label>
-              <input 
-                type="time" 
+              <input
+                type="time"
                 v-model="newReservation.end"
                 min="08:00"
                 max="18:00"
                 required
-              >
+              />
             </div>
 
             <div class="form-group">
               <label>Description</label>
-              <textarea 
+              <textarea
                 v-model="newReservation.description"
                 placeholder="Description optionnelle"
               ></textarea>
@@ -52,16 +74,9 @@
 
             <div class="form-group">
               <label>Salle</label>
-              <select 
-                v-model="newReservation.roomId"
-                required
-              >
+              <select v-model="newReservation.roomId" required>
                 <option value="">Sélectionner une salle</option>
-                <option 
-                  v-for="room in rooms" 
-                  :key="room.id"
-                  :value="room.id"
-                >
+                <option v-for="room in rooms" :key="room.id" :value="room.id">
                   {{ room.name }} ({{ room.capacity }} pers.)
                 </option>
               </select>
@@ -71,18 +86,18 @@
               <button type="submit" class="btn-submit">
                 {{ isEditing ? 'Sauvegarder' : 'Ajouter aux événements' }}
               </button>
-              <button 
-                v-if="isEditing" 
-                type="button" 
-                class="btn-delete" 
+              <button
+                v-if="isEditing"
+                type="button"
+                class="btn-delete"
                 @click="deleteReservation"
               >
                 Supprimer
               </button>
-              <button 
-                v-if="isEditing" 
-                type="button" 
-                class="btn-cancel" 
+              <button
+                v-if="isEditing"
+                type="button"
+                class="btn-cancel"
                 @click="cancelEdit"
               >
                 Annuler
@@ -92,8 +107,8 @@
 
           <div class="events-list">
             <h3>Événements à planifier</h3>
-            <div 
-              v-for="event in unscheduledEvents" 
+            <div
+              v-for="event in unscheduledEvents"
               :key="event.id"
               class="unscheduled-event"
               draggable="true"
@@ -101,9 +116,15 @@
             >
               <div class="event-header">
                 <span class="event-title">{{ event.title }}</span>
-                <button @click="removeUnscheduledEvent(event.id)" class="btn-remove">×</button>
+                <button
+                  @click="removeUnscheduledEvent(event.id)"
+                  class="btn-remove"
+                >
+                  ×
+                </button>
               </div>
               <div class="event-details">
+                <div>{{ formatDate(event.date) }}</div>
                 <div>{{ event.start }} - {{ event.end }}</div>
                 <div>{{ getRoomName(event.roomId) }}</div>
               </div>
@@ -116,7 +137,10 @@
           <div class="calendar-navigation">
             <button @click="prevWeek" class="nav-btn">←</button>
             <div class="week-selector" @click="showDatePicker = true">
-              <span>Semaine du {{ formatDate(weekStart) }} au {{ formatDate(weekEnd) }}</span>
+              <span
+                >Semaine du {{ formatDate(weekStart) }} au
+                {{ formatDate(weekEnd) }}</span
+              >
               <VueDatePicker
                 v-if="showDatePicker"
                 v-model="selectedDate"
@@ -135,32 +159,62 @@
 
           <div class="week-view">
             <div class="weekdays-header">
-              <div v-for="(day, index) in weekDays" :key="index" class="weekday">
+              <div class="room-column-header"></div>
+              <div
+                v-for="(day, index) in weekDays"
+                :key="index"
+                class="weekday"
+              >
                 {{ day }}
               </div>
             </div>
-            <div class="days-grid">
-              <div 
-                v-for="date in dates" 
-                :key="date.toISOString()"
-                class="day-cell"
-                :class="{ 'current-day': isToday(date) }"
-                @dragover.prevent
-                @drop="onDrop($event, date)"
-              >
-                <div class="date-number">{{ date.getDate() }}</div>
-                <div class="events-container">
-                  <div 
-                    v-for="event in getEventsForDate(date)" 
-                    :key="event.id"
-                    class="calendar-event"
-                    draggable="true"
-                    @dragstart="onDragStart($event, event)"
-                    @click="editEvent(event)"
+            <div class="calendar-grid">
+              <!-- Colonne des salles -->
+              <div class="room-column">
+                <div v-for="room in rooms" :key="room.id" class="room-cell">
+                  {{ room.name }}
+                </div>
+              </div>
+              <!-- Grille des jours et événements -->
+              <div class="days-grid">
+                <div
+                  v-for="date in dates"
+                  :key="date.toISOString()"
+                  class="day-column"
+                >
+                  <div class="date-number">{{ date.getDate() }}</div>
+                  <div
+                    v-for="room in rooms"
+                    :key="room.id"
+                    class="room-day-cell"
+                    :class="{ 'current-day': isToday(date) }"
+                    @dragover.prevent
+                    @drop="onDrop($event, date, room.id)"
                   >
-                    <div class="event-time">{{ event.start }} - {{ event.end }}</div>
-                    <div class="event-title">{{ event.title }}</div>
-                    <div class="event-room">{{ getRoomName(event.roomId) }}</div>
+                    <div class="events-container">
+                      <div
+                        v-for="event in getEventsForDateAndRoom(date, room.id)"
+                        :key="event.id"
+                        class="calendar-event"
+                        :class="{
+                          'pending-approval': event.status === 'pending',
+                        }"
+                        draggable="true"
+                        @dragstart="onDragStart($event, event)"
+                        @click="editEvent(event)"
+                      >
+                        <div class="event-time">
+                          {{ event.start }} - {{ event.end }}
+                        </div>
+                        <div class="event-title">{{ event.title }}</div>
+                        <div
+                          class="event-status"
+                          v-if="event.status === 'pending'"
+                        >
+                          En attente
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -169,12 +223,65 @@
         </div>
       </div>
     </main>
-    <button @click="exportCalendar" class="btn-export">Exporter le calendrier</button>
+    <button @click="exportCalendar" class="btn-export">
+      Exporter le calendrier
+    </button>
+
+    <!-- Modal d'édition -->
+    <div v-if="isEditing" class="edit-modal">
+      <div class="modal-content">
+        <h2>Modifier la réservation</h2>
+
+        <div class="form-group">
+          <label>Titre</label>
+          <input v-model="newReservation.title" type="text" required />
+        </div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input
+            v-model="newReservation.date"
+            type="date"
+            required
+            :min="new Date().toISOString().split('T')[0]"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Début</label>
+          <input v-model="newReservation.start" type="time" required />
+        </div>
+
+        <div class="form-group">
+          <label>Fin</label>
+          <input v-model="newReservation.end" type="time" required />
+        </div>
+
+        <div class="form-group">
+          <label>Salle</label>
+          <select v-model="newReservation.roomId" required>
+            <option v-for="room in rooms" :key="room.id" :value="room.id">
+              {{ room.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="updateReservation" class="btn-submit">
+            Mettre à jour
+          </button>
+          <button @click="cancelEdit" class="btn-cancel">Annuler</button>
+          <button @click="deleteReservation" class="btn-delete">
+            Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoomStore } from './store'
 import { storeToRefs } from 'pinia'
 import VueDatePicker from '@vuepic/vue-datepicker'
@@ -182,11 +289,11 @@ import '@vuepic/vue-datepicker/dist/main.css'
 
 export default {
   components: {
-    VueDatePicker
+    VueDatePicker,
   },
   setup() {
     const store = useRoomStore()
-    const { rooms } = storeToRefs(store)
+    const { rooms, reservations } = storeToRefs(store)
     const unscheduledEvents = ref([])
     const draggedEvent = ref(null)
 
@@ -194,10 +301,11 @@ export default {
     const editingEventId = ref(null)
     const newReservation = ref({
       title: '',
+      date: new Date(),
       start: '09:00',
       end: '10:00',
       description: '',
-      roomId: ''
+      roomId: '',
     })
 
     const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -207,12 +315,12 @@ export default {
     const dates = computed(() => {
       const dates = []
       const current = new Date(weekStart.value)
-      
+
       for (let i = 0; i < 7; i++) {
         dates.push(new Date(current))
         current.setDate(current.getDate() + 1)
       }
-      
+
       return dates
     })
 
@@ -235,10 +343,10 @@ export default {
       try {
         const d = new Date(date)
         if (isNaN(d.getTime())) return ''
-        
+
         return new Intl.DateTimeFormat('fr-FR', {
           day: 'numeric',
-          month: 'long'
+          month: 'long',
         }).format(d)
       } catch (error) {
         console.error('Erreur de formatage de date:', error)
@@ -275,13 +383,15 @@ export default {
         return
       }
 
-      if (!store.isRoomAvailable(
-        newReservation.value.roomId,
-        weekStart.value,
-        newReservation.value.start,
-        newReservation.value.end
-      )) {
-        alert('Cette salle n\'est pas disponible pour ce créneau')
+      if (
+        !store.isRoomAvailable(
+          newReservation.value.roomId,
+          weekStart.value,
+          newReservation.value.start,
+          newReservation.value.end
+        )
+      ) {
+        alert("Cette salle n'est pas disponible pour ce créneau")
         return
       }
 
@@ -289,7 +399,7 @@ export default {
         store.addReservation({
           ...newReservation.value,
           id: Date.now(),
-          date: weekStart.value
+          date: weekStart.value,
         })
         resetForm()
       } catch (error) {
@@ -301,31 +411,52 @@ export default {
     function resetForm() {
       newReservation.value = {
         title: '',
+        date: new Date(),
         start: '09:00',
         end: '10:00',
         description: '',
-        roomId: ''
+        roomId: '',
       }
     }
 
-    function addToUnscheduled() {
+    async function addToUnscheduled() {
       if (!newReservation.value.title || !newReservation.value.roomId) {
         alert('Veuillez remplir au moins le titre et sélectionner une salle')
         return
       }
 
-      unscheduledEvents.value.push({
-        ...newReservation.value,
-        id: Date.now()
-      })
+      try {
+        console.log('Données du formulaire:', newReservation.value)
 
-      resetForm()
+        const reservationData = {
+          title: newReservation.value.title,
+          date: new Date(newReservation.value.date).toISOString().split('T')[0],
+          start: newReservation.value.start,
+          end: newReservation.value.end,
+          description: newReservation.value.description || '',
+          roomId: parseInt(newReservation.value.roomId),
+        }
+
+        console.log('Données formatées:', reservationData)
+
+        await store.addReservation(reservationData)
+        console.log('Réservation ajoutée avec succès')
+        resetForm()
+      } catch (error) {
+        console.error('Erreur détaillée:', error)
+        alert(
+          "Erreur lors de l'ajout de la réservation: " +
+            (error.response?.data?.message || error.message)
+        )
+      }
     }
 
     function removeUnscheduledEvent(id) {
-      const index = unscheduledEvents.value.findIndex(e => e.id === id)
+      const index = unscheduledEvents.value.findIndex((e) => e.id === id)
       if (index !== -1) {
         unscheduledEvents.value.splice(index, 1)
+        // Supprimer également du store
+        store.deleteReservation(id)
       }
     }
 
@@ -335,61 +466,52 @@ export default {
     }
 
     function getRoomName(roomId) {
-      const room = rooms.value.find(r => r.id === roomId)
+      const room = rooms.value.find((r) => r.id === roomId)
       return room ? room.name : ''
     }
 
-    function onDrop(event, date) {
+    async function onDrop(event, newDate, newRoomId) {
       if (!draggedEvent.value) return
 
-      const newReservation = {
-        ...draggedEvent.value,
-        date: new Date(date),
-        id: draggedEvent.value.id || Date.now()
-      }
-
       try {
-        const isAvailable = store.isRoomAvailable(
-          newReservation.roomId,
-          newReservation.date,
-          newReservation.start,
-          newReservation.end,
-          draggedEvent.value.id
-        )
-
-        if (!isAvailable) {
-          alert('Cette salle n\'est pas disponible pour ce créneau')
-          return
+        const updatedReservation = {
+          ...draggedEvent.value,
+          date: newDate.toISOString().split('T')[0],
+          roomId: newRoomId,
+          status: 'pending', // Mettre le statut en attente
         }
 
-        const isUnscheduled = unscheduledEvents.value.find(e => e.id === draggedEvent.value.id)
-        
-        if (isUnscheduled) {
-          const index = unscheduledEvents.value.findIndex(e => e.id === draggedEvent.value.id)
-          if (index !== -1) {
-            unscheduledEvents.value.splice(index, 1)
-          }
-          store.addReservation(newReservation)
-        } else {
-          store.deleteReservation(draggedEvent.value.id)
-          store.addReservation(newReservation)
-        }
+        console.log('Mise à jour de la réservation:', updatedReservation)
 
+        await store.updateReservation(draggedEvent.value.id, updatedReservation)
         draggedEvent.value = null
       } catch (error) {
         console.error('Erreur lors du déplacement:', error)
-        alert('Erreur lors de la planification de l\'événement')
+        alert('Erreur lors de la mise à jour de la réservation')
       }
     }
 
     function getEventsForDate(date) {
       if (!date) return []
-      return store.reservations.filter(event => {
+      const events = store.reservations.filter((event) => {
         const eventDate = new Date(event.date)
-        return eventDate.getFullYear() === date.getFullYear() &&
-               eventDate.getMonth() === date.getMonth() &&
-               eventDate.getDate() === date.getDate()
+        const compareDate = new Date(date)
+        return (
+          eventDate.getFullYear() === compareDate.getFullYear() &&
+          eventDate.getMonth() === compareDate.getMonth() &&
+          eventDate.getDate() === compareDate.getDate()
+        )
       })
+      console.log('Events for date:', date, events)
+      return events
+    }
+
+    function getEventsForDateAndRoom(date, roomId) {
+      const events = getEventsForDate(date).filter(
+        (event) => event.roomId === roomId
+      )
+      console.log('Events for date and room:', date, roomId, events)
+      return events
     }
 
     const showDatePicker = ref(false)
@@ -397,35 +519,62 @@ export default {
 
     function onDateSelect(date) {
       if (!date) return
-      
+
       try {
         const selectedDate = new Date(date)
-        
+
         const day = selectedDate.getDay()
         const diff = selectedDate.getDate() - day + (day === 0 ? -6 : 1)
         const monday = new Date(selectedDate.setDate(diff))
-        
+
         weekStart.value = new Date(monday)
         weekEnd.value = new Date(monday.setDate(monday.getDate() + 6))
-        
+
         showDatePicker.value = false
       } catch (error) {
         console.error('Erreur lors de la sélection de date:', error)
       }
     }
 
-    function editEvent(event) {
-      isEditing.value = true
-      editingEventId.value = event.id
-      newReservation.value = { ...event }
+    async function editEvent(event) {
+      try {
+        isEditing.value = true
+        editingEventId.value = event.id
+
+        // Formatage correct de la date pour l'input type="date"
+        const formattedDate = new Date(event.date).toISOString().split('T')[0]
+
+        newReservation.value = {
+          ...event,
+          date: formattedDate, // Utiliser la date formatée
+        }
+
+        console.log('Édition de la réservation:', newReservation.value)
+      } catch (error) {
+        console.error("Erreur lors de l'édition:", error)
+      }
     }
 
-    function updateReservation() {
+    async function updateReservation() {
       try {
-        store.updateReservation({
+        if (!newReservation.value.title || !newReservation.value.roomId) {
+          alert('Veuillez remplir tous les champs requis')
+          return
+        }
+
+        // S'assurer que la date est au bon format
+        const updatedReservation = {
           ...newReservation.value,
-          id: editingEventId.value
-        })
+          id: editingEventId.value,
+          date: new Date(newReservation.value.date).toISOString().split('T')[0],
+          roomId: parseInt(newReservation.value.roomId),
+        }
+
+        console.log('Mise à jour de la réservation:', updatedReservation)
+
+        await store.updateReservation(editingEventId.value, updatedReservation)
+        await store.fetchReservations()
+
         cancelEdit()
       } catch (error) {
         console.error('Erreur lors de la mise à jour:', error)
@@ -435,7 +584,17 @@ export default {
 
     function deleteReservation() {
       if (confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) {
+        // Supprimer du store
         store.deleteReservation(editingEventId.value)
+
+        // Supprimer aussi de la liste des événements non planifiés
+        const index = unscheduledEvents.value.findIndex(
+          (e) => e.id === editingEventId.value
+        )
+        if (index !== -1) {
+          unscheduledEvents.value.splice(index, 1)
+        }
+
         cancelEdit()
       }
     }
@@ -448,19 +607,28 @@ export default {
 
     const currentTime = ref(new Date().toLocaleTimeString())
     setInterval(() => {
-      currentTime.value = new Date().toLocaleTimeString()
+      currentTime.value = new Date().toDateString()
     }, 1000)
 
     function exportCalendar() {
       const events = store.reservations
-      let icsContent = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Your Company//Your Product//EN\n'
+      let icsContent =
+        'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Your Company//Your Product//EN\n'
 
-      events.forEach(event => {
+      events.forEach((event) => {
         icsContent += 'BEGIN:VEVENT\n'
         icsContent += `UID:${event.id}@yourdomain.com\n`
-        icsContent += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\n`
-        icsContent += `DTSTART:${new Date(event.date).toISOString().split('T')[0].replace(/-/g, '')}T${event.start.replace(':', '')}00\n`
-        icsContent += `DTEND:${new Date(event.date).toISOString().split('T')[0].replace(/-/g, '')}T${event.end.replace(':', '')}00\n`
+        icsContent += `DTSTAMP:${
+          new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
+        }Z\n`
+        icsContent += `DTSTART:${new Date(event.date)
+          .toISOString()
+          .split('T')[0]
+          .replace(/-/g, '')}T${event.start.replace(':', '')}00\n`
+        icsContent += `DTEND:${new Date(event.date)
+          .toISOString()
+          .split('T')[0]
+          .replace(/-/g, '')}T${event.end.replace(':', '')}00\n`
         icsContent += `SUMMARY:${event.title}\n`
         icsContent += `DESCRIPTION:${event.description}\n`
         icsContent += 'END:VEVENT\n'
@@ -474,6 +642,17 @@ export default {
       link.download = 'calendar.ics'
       link.click()
     }
+
+    // Charger les réservations au démarrage
+    onMounted(async () => {
+      try {
+        await store.fetchRooms()
+        await store.fetchReservations()
+        store.startPolling() // Démarrer le polling pour les mises à jour automatiques
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+      }
+    })
 
     return {
       newReservation,
@@ -496,6 +675,7 @@ export default {
       getRoomName,
       onDrop,
       getEventsForDate,
+      getEventsForDateAndRoom,
       showDatePicker,
       selectedDate,
       onDateSelect,
@@ -505,13 +685,228 @@ export default {
       deleteReservation,
       cancelEdit,
       currentTime,
-      exportCalendar
+      exportCalendar,
+      store,
     }
-  }
+  },
 }
 </script>
 
 <style>
+/* Variables de couleurs et thème */
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #42b983;
+  --danger-color: #e74c3c;
+  --warning-color: #f39c12;
+  --gray-light: #f8f9fa;
+  --gray-medium: #e9ecef;
+  --gray-dark: #495057;
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --radius: 8px;
+  --transition: all 0.3s ease;
+}
+
+/* Style Modal */
+.edit-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: var(--radius);
+  min-width: 400px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h2 {
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--gray-medium);
+  padding-bottom: 0.75rem;
+}
+
+/* Formulaires */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--gray-medium);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  transition: var(--transition);
+  background-color: white;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(66, 185, 131, 0.1);
+}
+
+/* Boutons */
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  justify-content: flex-end;
+}
+
+button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.95rem;
+}
+
+.btn-submit {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.btn-submit:hover {
+  background-color: #3aa876;
+  transform: translateY(-1px);
+}
+
+.btn-cancel {
+  background-color: var(--gray-medium);
+  color: var(--gray-dark);
+}
+
+.btn-cancel:hover {
+  background-color: var(--gray-dark);
+  color: white;
+}
+
+.btn-delete {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #c0392b;
+}
+
+/* Calendrier et événements */
+.calendar-event {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.calendar-event:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.calendar-event.pending-approval {
+  background-color: var(--warning-color);
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+.event-time {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.event-title {
+  font-size: 0.95rem;
+}
+
+.event-status {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  margin-top: 0.5rem;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    min-width: unset;
+    padding: 1.5rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Personnalisation des inputs date et time */
+input[type='date'],
+input[type='time'],
+input[type='text'] {
+  width: 90% !important;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.5rem;
+}
+
 .app {
   max-width: 1400px;
   margin: 0 auto;
@@ -531,14 +926,14 @@ export default {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .calendar-section {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .calendar-navigation {
@@ -550,106 +945,111 @@ export default {
 }
 
 .nav-btn {
-  background-color: #42b983;
-  color: white;
-  border: none;
+  background: none;
+  border: 1px solid #ddd;
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
+  color: #333;
 }
 
-.current-period {
-  font-weight: bold;
-  font-size: 1.2em;
-  min-width: 200px;
+.nav-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.week-selector {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 300px;
   text-align: center;
+}
+
+.week-selector:hover {
+  background-color: #f5f5f5;
+}
+
+.week-view {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .weekdays-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  grid-template-columns: 150px repeat(7, 1fr);
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #ddd;
 }
 
 .weekday {
-  padding: 10px;
+  padding: 12px;
   text-align: center;
+  font-weight: bold;
+  border-left: 1px solid #ddd;
+}
+
+.calendar-grid {
+  display: flex;
+}
+
+.room-column {
+  width: 150px;
+  border-right: 1px solid #ddd;
+  background-color: #f8f9fa;
+}
+
+.room-cell {
+  height: 120px;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
   font-weight: bold;
 }
 
 .days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-left: 1px solid #dee2e6;
+  flex: 1;
 }
 
-.day-cell {
-  min-height: 120px;
-  padding: 10px;
-  border-right: 1px solid #dee2e6;
-  border-bottom: 1px solid #dee2e6;
-  cursor: pointer;
+.day-column {
+  border-right: 1px solid #ddd;
 }
 
 .date-number {
+  padding: 8px;
+  text-align: center;
   font-weight: bold;
-  margin-bottom: 8px;
+  border-bottom: 1px solid #ddd;
 }
 
-.current-day {
+.room-day-cell {
+  height: 120px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  background-color: white;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.room-day-cell:hover {
   background-color: #f8f9fa;
 }
 
+.room-day-cell.current-day {
+  background-color: #f0f9ff;
+}
+
+.room-day-cell.dragover {
+  cursor: copy;
+  background-color: rgba(66, 185, 131, 0.1);
+  border: 2px dashed #42b983;
+}
+
 .events-container {
-  min-height: 80px;
-}
-
-/* Styles pour le formulaire existant */
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.form-group textarea {
-  height: 100px;
-  resize: vertical;
-}
-
-.btn-submit {
-  background-color: #42b983;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 20px;
-}
-
-.btn-submit:hover {
-  background-color: #3aa876;
-}
-
-.events-list {
-  margin-top: 30px;
-  border-top: 1px solid #eee;
-  padding-top: 20px;
+  min-height: 100%;
 }
 
 .unscheduled-event {
@@ -670,10 +1070,6 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 5px;
-}
-
-.event-title {
-  font-weight: bold;
 }
 
 .event-details {
@@ -705,105 +1101,57 @@ export default {
   color: #bd2130;
 }
 
+.room-column-header {
+  padding: 10px;
+  text-align: center;
+  font-weight: bold;
+  border-right: 1px solid #dee2e6;
+}
+
+.dp__input_wrap {
+  svg {
+    display: none;
+  }
+
+  .dp--clear-btn {
+    svg {
+      display: block;
+    }
+  }
+}
+
+/* Animation pour le drag & drop */
 .calendar-event {
-  background-color: #42b983;
-  color: white;
-  padding: 5px 8px;
-  border-radius: 4px;
-  margin-bottom: 5px;
-  font-size: 0.9em;
+  animation: fadeIn 0.3s ease;
 }
 
-.event-time {
-  font-size: 0.8em;
-  opacity: 0.9;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.event-room {
-  font-size: 0.8em;
-  opacity: 0.9;
-}
-
-.calendar-navigation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.week-selector {
-  cursor: pointer;
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: #fff;
-  position: relative;
-}
-
-.week-selector:hover {
-  background-color: #f8f9fa;
-}
-
-.nav-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-}
-
-.nav-btn:hover {
-  background-color: #f8f9fa;
-}
-
-:deep(.dp__main) {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.btn-submit {
-  background-color: #42b983;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  flex: 1;
-}
-
-.btn-delete {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-cancel {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-submit:hover { background-color: #3aa876; }
-.btn-delete:hover { background-color: #c82333; }
-.btn-cancel:hover { background-color: #5a6268; }
-
+/* Style pour le drag & drop */
 .calendar-event {
   cursor: pointer;
+}
+
+.calendar-event:active {
+  cursor: grabbing;
+}
+
+.room-day-cell {
+  cursor: pointer;
+}
+
+.room-day-cell.dragover {
+  cursor: copy;
+  background-color: rgba(66, 185, 131, 0.1);
+  border: 2px dashed #42b983;
 }
 </style>

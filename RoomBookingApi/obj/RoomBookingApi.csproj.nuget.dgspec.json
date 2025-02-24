@@ -1,31 +1,30 @@
 {
   "format": 1,
   "restore": {
-    "/Users/nico/Documents/web/cours/web full stack/RoomBookingApi/RoomBookingApi.csproj": {}
+    "/Users/minhnguyen/Desktop/Cours/M1/RoomClass/RoomBookingApi/RoomBookingApi.csproj": {}
   },
   "projects": {
-    "/Users/nico/Documents/web/cours/web full stack/RoomBookingApi/RoomBookingApi.csproj": {
+    "/Users/minhnguyen/Desktop/Cours/M1/RoomClass/RoomBookingApi/RoomBookingApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/nico/Documents/web/cours/web full stack/RoomBookingApi/RoomBookingApi.csproj",
+        "projectUniqueName": "/Users/minhnguyen/Desktop/Cours/M1/RoomClass/RoomBookingApi/RoomBookingApi.csproj",
         "projectName": "RoomBookingApi",
-        "projectPath": "/Users/nico/Documents/web/cours/web full stack/RoomBookingApi/RoomBookingApi.csproj",
-        "packagesPath": "/Users/nico/.nuget/packages/",
-        "outputPath": "/Users/nico/Documents/web/cours/web full stack/RoomBookingApi/obj/",
+        "projectPath": "/Users/minhnguyen/Desktop/Cours/M1/RoomClass/RoomBookingApi/RoomBookingApi.csproj",
+        "packagesPath": "/Users/minhnguyen/.nuget/packages/",
+        "outputPath": "/Users/minhnguyen/Desktop/Cours/M1/RoomClass/RoomBookingApi/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/nico/.nuget/NuGet/NuGet.Config"
+          "/Users/minhnguyen/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net9.0"
+          "net8.0"
         ],
         "sources": {
-          "/opt/homebrew/Cellar/dotnet/9.0.101/libexec/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net9.0": {
-            "targetAlias": "net9.0",
+          "net8.0": {
+            "targetAlias": "net8.0",
             "projectReferences": {}
           }
         },
@@ -38,16 +37,25 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.100"
+        }
       },
       "frameworks": {
-        "net9.0": {
-          "targetAlias": "net9.0",
+        "net8.0": {
+          "targetAlias": "net8.0",
           "dependencies": {
-            "Microsoft.AspNetCore.OpenApi": {
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.0, )"
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Sqlite": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.5.0, )"
             }
           },
           "imports": [
@@ -69,7 +77,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/9.0.101/libexec/sdk/9.0.101/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.404/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
