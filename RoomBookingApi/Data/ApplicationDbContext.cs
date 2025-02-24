@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RoomBookingApi.Models;
 
 namespace RoomBookingApi.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -15,6 +16,8 @@ namespace RoomBookingApi.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder); // 🔹 Important pour ASP.NET Identity
+
             // Données initiales pour les salles
             modelBuilder.Entity<Room>().HasData(
                 new Room { Id = 1, Name = "Salle A", Capacity = 10, Equipment = "Projecteur, Tableau blanc" },
@@ -24,4 +27,4 @@ namespace RoomBookingApi.Data
             );
         }
     }
-} 
+}
