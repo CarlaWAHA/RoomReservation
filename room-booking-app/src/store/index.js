@@ -97,16 +97,24 @@ export const useRoomStore = defineStore('room', {
 
     async fetchReservations() {
       try {
-        this.loading = true
         const response = await getReservations()
-        this.reservations = response.data
+        // Trier les réservations par date et heure
+        const sortedReservations = response.data.sort((a, b) => {
+          const dateA = new Date(a.date + 'T' + a.start)
+          const dateB = new Date(b.date + 'T' + b.start)
+          return dateA - dateB
+        })
+
+        // Mettre à jour l'état seulement si les données ont changé
+        if (JSON.stringify(this.reservations) !== JSON.stringify(sortedReservations)) {
+          console.log('Nouvelles réservations détectées, mise à jour du state')
+          this.reservations = sortedReservations
+        }
+
         this.lastFetchTime = new Date()
-        console.log('Réservations mises à jour:', this.reservations)
       } catch (error) {
         console.error('Erreur lors de la récupération des réservations:', error)
         this.error = error
-      } finally {
-        this.loading = false
       }
     },
 
@@ -166,19 +174,21 @@ export const useRoomStore = defineStore('room', {
 
     startPolling() {
       console.log('Démarrage du polling des réservations')
-      // Arrêter le polling existant s'il y en a un
-      this.stopPolling()
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval)
+      }
 
-      // Démarrer un nouveau polling
-      this.pollingInterval = setInterval(async () => {
-        console.log('Polling: récupération des réservations')
-        await this.fetchReservations()
-      }, 2000) // Polling toutes les 2 secondes
+      // Première récupération immédiate
+      this.fetchReservations()
+
+      // Puis toutes les 2 secondes
+      this.pollingInterval = setInterval(() => {
+        this.fetchReservations()
+      }, 2000)
     },
 
     stopPolling() {
       if (this.pollingInterval) {
-        console.log('Arrêt du polling des réservations')
         clearInterval(this.pollingInterval)
         this.pollingInterval = null
       }
