@@ -17,7 +17,8 @@ builder.Services.AddCors(options =>
         builder => builder
             .WithOrigins("http://localhost:5173")
             .AllowAnyMethod()
-            .AllowAnyHeader());
+            .AllowAnyHeader()
+            .SetIsOriginAllowed(origin => true)); // Permet toutes les origines en développement
 });
 
 // Configurer SQLite

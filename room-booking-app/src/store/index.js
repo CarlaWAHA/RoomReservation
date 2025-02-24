@@ -11,7 +11,9 @@ export const useRoomStore = defineStore('room', {
       { id: 4, name: 'Salle D', capacity: 15, equipment: 'Tableau blanc, Wifi haute vitesse' }
     ],
     loading: false,
-    error: null
+    error: null,
+    pollingInterval: null,
+    lastFetchTime: null
   }),
 
   getters: {
@@ -98,10 +100,11 @@ export const useRoomStore = defineStore('room', {
         this.loading = true
         const response = await getReservations()
         this.reservations = response.data
-        console.log('Reservations fetched:', this.reservations)
+        this.lastFetchTime = new Date()
+        console.log('Réservations mises à jour:', this.reservations)
       } catch (error) {
-        console.error('Error fetching reservations:', error)
-        throw error
+        console.error('Erreur lors de la récupération des réservations:', error)
+        this.error = error
       } finally {
         this.loading = false
       }
@@ -109,55 +112,30 @@ export const useRoomStore = defineStore('room', {
 
     async addReservation(reservation) {
       try {
-        console.log('Données envoyées à l\'API:', {
-          title: reservation.title,
-          date: reservation.date,
-          start: reservation.start,
-          end: reservation.end,
-          description: reservation.description,
-          roomId: reservation.roomId
-        })
-
-        const response = await createReservation({
-          title: reservation.title,
-          date: reservation.date,
-          start: reservation.start,
-          end: reservation.end,
-          description: reservation.description || '',
-          roomId: parseInt(reservation.roomId)
-        })
-
-        console.log('Réponse de l\'API:', response.data)
+        const response = await createReservation(reservation)
         this.reservations.push(response.data)
+        // Forcer une mise à jour immédiate
+        await this.fetchReservations()
         return response.data
       } catch (error) {
-        console.error('Détails de l\'erreur:', error.response?.data || error.message)
+        console.error('Erreur lors de l\'ajout de la réservation:', error)
         throw error
       }
     },
 
     async updateReservation(id, updatedReservation) {
       try {
-        this.loading = true
-        console.log('Updating reservation:', id, updatedReservation)
-
         const response = await updateReservation(id, updatedReservation)
-
-        // Mettre à jour la réservation dans le state
         const index = this.reservations.findIndex(r => r.id === id)
         if (index !== -1) {
           this.reservations[index] = response.data
         }
-
-        // Recharger toutes les réservations pour être sûr
+        // Forcer une mise à jour immédiate
         await this.fetchReservations()
-
         return response.data
       } catch (error) {
-        console.error('Error updating reservation:', error)
+        console.error('Erreur lors de la mise à jour de la réservation:', error)
         throw error
-      } finally {
-        this.loading = false
       }
     },
 
@@ -186,11 +164,24 @@ export const useRoomStore = defineStore('room', {
       )
     },
 
-    // Ajouter un polling pour les mises à jour automatiques
     startPolling() {
-      setInterval(() => {
-        this.fetchReservations()
-      }, 5000) // Rafraîchir toutes les 5 secondes
+      console.log('Démarrage du polling des réservations')
+      // Arrêter le polling existant s'il y en a un
+      this.stopPolling()
+
+      // Démarrer un nouveau polling
+      this.pollingInterval = setInterval(async () => {
+        console.log('Polling: récupération des réservations')
+        await this.fetchReservations()
+      }, 2000) // Polling toutes les 2 secondes
+    },
+
+    stopPolling() {
+      if (this.pollingInterval) {
+        console.log('Arrêt du polling des réservations')
+        clearInterval(this.pollingInterval)
+        this.pollingInterval = null
+      }
     }
   }
 })

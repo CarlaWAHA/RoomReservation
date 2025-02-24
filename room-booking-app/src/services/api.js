@@ -5,7 +5,8 @@ const api = axios.create({
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: false // Désactive les credentials
 });
 
 // Intercepteur pour gérer les erreurs

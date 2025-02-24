@@ -280,416 +280,380 @@
   </div>
 </template>
 
-<script>
-import { ref, computed, onMounted } from 'vue'
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoomStore } from './store'
 import { storeToRefs } from 'pinia'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 
-export default {
-  components: {
-    VueDatePicker,
-  },
-  setup() {
-    const store = useRoomStore()
-    const { rooms, reservations } = storeToRefs(store)
-    const unscheduledEvents = ref([])
-    const draggedEvent = ref(null)
+const store = useRoomStore()
+const { rooms, reservations } = storeToRefs(store)
+const unscheduledEvents = ref([])
+const draggedEvent = ref(null)
 
-    const isEditing = ref(false)
-    const editingEventId = ref(null)
-    const newReservation = ref({
-      title: '',
-      date: new Date(),
-      start: '09:00',
-      end: '10:00',
-      description: '',
-      roomId: '',
-    })
+const isEditing = ref(false)
+const editingEventId = ref(null)
+const newReservation = ref({
+  title: '',
+  date: new Date(),
+  start: '09:00',
+  end: '10:00',
+  description: '',
+  roomId: '',
+})
 
-    const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-    const weekStart = ref(getStartOfWeek(new Date()))
-    const weekEnd = ref(getEndOfWeek(weekStart.value))
+const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const weekStart = ref(getStartOfWeek(new Date()))
+const weekEnd = ref(getEndOfWeek(weekStart.value))
 
-    const dates = computed(() => {
-      const dates = []
-      const current = new Date(weekStart.value)
+const dates = computed(() => {
+  const dates = []
+  const current = new Date(weekStart.value)
 
-      for (let i = 0; i < 7; i++) {
-        dates.push(new Date(current))
-        current.setDate(current.getDate() + 1)
-      }
+  for (let i = 0; i < 7; i++) {
+    dates.push(new Date(current))
+    current.setDate(current.getDate() + 1)
+  }
 
-      return dates
-    })
+  return dates
+})
 
-    function getStartOfWeek(date) {
-      const d = new Date(date)
-      const day = d.getDay()
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-      d.setDate(diff)
-      return new Date(d)
-    }
-
-    function getEndOfWeek(startDate) {
-      const end = new Date(startDate)
-      end.setDate(end.getDate() + 6)
-      return end
-    }
-
-    function formatDate(date) {
-      if (!date) return ''
-      try {
-        const d = new Date(date)
-        if (isNaN(d.getTime())) return ''
-
-        return new Intl.DateTimeFormat('fr-FR', {
-          day: 'numeric',
-          month: 'long',
-        }).format(d)
-      } catch (error) {
-        console.error('Erreur de formatage de date:', error)
-        return ''
-      }
-    }
-
-    function prevWeek() {
-      const newStart = new Date(weekStart.value)
-      newStart.setDate(newStart.getDate() - 7)
-      weekStart.value = newStart
-      weekEnd.value = getEndOfWeek(newStart)
-    }
-
-    function nextWeek() {
-      const newStart = new Date(weekStart.value)
-      newStart.setDate(newStart.getDate() + 7)
-      weekStart.value = newStart
-      weekEnd.value = getEndOfWeek(newStart)
-    }
-
-    function isToday(date) {
-      const today = new Date()
-      return date.toDateString() === today.toDateString()
-    }
-
-    function selectDate(date) {
-      console.log('Date sélectionnée:', date)
-    }
-
-    function submitReservation() {
-      if (!newReservation.value.roomId) {
-        alert('Veuillez sélectionner une salle')
-        return
-      }
-
-      if (
-        !store.isRoomAvailable(
-          newReservation.value.roomId,
-          weekStart.value,
-          newReservation.value.start,
-          newReservation.value.end
-        )
-      ) {
-        alert("Cette salle n'est pas disponible pour ce créneau")
-        return
-      }
-
-      try {
-        store.addReservation({
-          ...newReservation.value,
-          id: Date.now(),
-          date: weekStart.value,
-        })
-        resetForm()
-      } catch (error) {
-        console.error('Erreur lors de la réservation:', error)
-        alert('Erreur lors de la réservation')
-      }
-    }
-
-    function resetForm() {
-      newReservation.value = {
-        title: '',
-        date: new Date(),
-        start: '09:00',
-        end: '10:00',
-        description: '',
-        roomId: '',
-      }
-    }
-
-    async function addToUnscheduled() {
-      if (!newReservation.value.title || !newReservation.value.roomId) {
-        alert('Veuillez remplir au moins le titre et sélectionner une salle')
-        return
-      }
-
-      try {
-        console.log('Données du formulaire:', newReservation.value)
-
-        const reservationData = {
-          title: newReservation.value.title,
-          date: new Date(newReservation.value.date).toISOString().split('T')[0],
-          start: newReservation.value.start,
-          end: newReservation.value.end,
-          description: newReservation.value.description || '',
-          roomId: parseInt(newReservation.value.roomId),
-        }
-
-        console.log('Données formatées:', reservationData)
-
-        await store.addReservation(reservationData)
-        console.log('Réservation ajoutée avec succès')
-        resetForm()
-      } catch (error) {
-        console.error('Erreur détaillée:', error)
-        alert(
-          "Erreur lors de l'ajout de la réservation: " +
-            (error.response?.data?.message || error.message)
-        )
-      }
-    }
-
-    function removeUnscheduledEvent(id) {
-      const index = unscheduledEvents.value.findIndex((e) => e.id === id)
-      if (index !== -1) {
-        unscheduledEvents.value.splice(index, 1)
-        // Supprimer également du store
-        store.deleteReservation(id)
-      }
-    }
-
-    function onDragStart(event, reservation) {
-      draggedEvent.value = reservation
-      event.dataTransfer.effectAllowed = 'move'
-    }
-
-    function getRoomName(roomId) {
-      const room = rooms.value.find((r) => r.id === roomId)
-      return room ? room.name : ''
-    }
-
-    async function onDrop(event, newDate, newRoomId) {
-      if (!draggedEvent.value) return
-
-      try {
-        const updatedReservation = {
-          ...draggedEvent.value,
-          date: newDate.toISOString().split('T')[0],
-          roomId: newRoomId,
-          status: 'pending', // Mettre le statut en attente
-        }
-
-        console.log('Mise à jour de la réservation:', updatedReservation)
-
-        await store.updateReservation(draggedEvent.value.id, updatedReservation)
-        draggedEvent.value = null
-      } catch (error) {
-        console.error('Erreur lors du déplacement:', error)
-        alert('Erreur lors de la mise à jour de la réservation')
-      }
-    }
-
-    function getEventsForDate(date) {
-      if (!date) return []
-      const events = store.reservations.filter((event) => {
-        const eventDate = new Date(event.date)
-        const compareDate = new Date(date)
-        return (
-          eventDate.getFullYear() === compareDate.getFullYear() &&
-          eventDate.getMonth() === compareDate.getMonth() &&
-          eventDate.getDate() === compareDate.getDate()
-        )
-      })
-      console.log('Events for date:', date, events)
-      return events
-    }
-
-    function getEventsForDateAndRoom(date, roomId) {
-      const events = getEventsForDate(date).filter(
-        (event) => event.roomId === roomId
-      )
-      console.log('Events for date and room:', date, roomId, events)
-      return events
-    }
-
-    const showDatePicker = ref(false)
-    const selectedDate = ref(new Date())
-
-    function onDateSelect(date) {
-      if (!date) return
-
-      try {
-        const selectedDate = new Date(date)
-
-        const day = selectedDate.getDay()
-        const diff = selectedDate.getDate() - day + (day === 0 ? -6 : 1)
-        const monday = new Date(selectedDate.setDate(diff))
-
-        weekStart.value = new Date(monday)
-        weekEnd.value = new Date(monday.setDate(monday.getDate() + 6))
-
-        showDatePicker.value = false
-      } catch (error) {
-        console.error('Erreur lors de la sélection de date:', error)
-      }
-    }
-
-    async function editEvent(event) {
-      try {
-        isEditing.value = true
-        editingEventId.value = event.id
-
-        // Formatage correct de la date pour l'input type="date"
-        const formattedDate = new Date(event.date).toISOString().split('T')[0]
-
-        newReservation.value = {
-          ...event,
-          date: formattedDate, // Utiliser la date formatée
-        }
-
-        console.log('Édition de la réservation:', newReservation.value)
-      } catch (error) {
-        console.error("Erreur lors de l'édition:", error)
-      }
-    }
-
-    async function updateReservation() {
-      try {
-        if (!newReservation.value.title || !newReservation.value.roomId) {
-          alert('Veuillez remplir tous les champs requis')
-          return
-        }
-
-        // S'assurer que la date est au bon format
-        const updatedReservation = {
-          ...newReservation.value,
-          id: editingEventId.value,
-          date: new Date(newReservation.value.date).toISOString().split('T')[0],
-          roomId: parseInt(newReservation.value.roomId),
-        }
-
-        console.log('Mise à jour de la réservation:', updatedReservation)
-
-        await store.updateReservation(editingEventId.value, updatedReservation)
-        await store.fetchReservations()
-
-        cancelEdit()
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour:', error)
-        alert('Erreur lors de la mise à jour de la réservation')
-      }
-    }
-
-    function deleteReservation() {
-      if (confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) {
-        // Supprimer du store
-        store.deleteReservation(editingEventId.value)
-
-        // Supprimer aussi de la liste des événements non planifiés
-        const index = unscheduledEvents.value.findIndex(
-          (e) => e.id === editingEventId.value
-        )
-        if (index !== -1) {
-          unscheduledEvents.value.splice(index, 1)
-        }
-
-        cancelEdit()
-      }
-    }
-
-    function cancelEdit() {
-      isEditing.value = false
-      editingEventId.value = null
-      resetForm()
-    }
-
-    const currentTime = ref(new Date().toLocaleTimeString())
-    setInterval(() => {
-      currentTime.value = new Date().toDateString()
-    }, 1000)
-
-    function exportCalendar() {
-      const events = store.reservations
-      let icsContent =
-        'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Your Company//Your Product//EN\n'
-
-      events.forEach((event) => {
-        icsContent += 'BEGIN:VEVENT\n'
-        icsContent += `UID:${event.id}@yourdomain.com\n`
-        icsContent += `DTSTAMP:${
-          new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
-        }Z\n`
-        icsContent += `DTSTART:${new Date(event.date)
-          .toISOString()
-          .split('T')[0]
-          .replace(/-/g, '')}T${event.start.replace(':', '')}00\n`
-        icsContent += `DTEND:${new Date(event.date)
-          .toISOString()
-          .split('T')[0]
-          .replace(/-/g, '')}T${event.end.replace(':', '')}00\n`
-        icsContent += `SUMMARY:${event.title}\n`
-        icsContent += `DESCRIPTION:${event.description}\n`
-        icsContent += 'END:VEVENT\n'
-      })
-
-      icsContent += 'END:VCALENDAR'
-
-      const blob = new Blob([icsContent], { type: 'text/calendar' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.download = 'calendar.ics'
-      link.click()
-    }
-
-    // Charger les réservations au démarrage
-    onMounted(async () => {
-      try {
-        await store.fetchRooms()
-        await store.fetchReservations()
-        store.startPolling() // Démarrer le polling pour les mises à jour automatiques
-      } catch (error) {
-        console.error('Error loading initial data:', error)
-      }
-    })
-
-    return {
-      newReservation,
-      rooms,
-      weekDays,
-      weekStart,
-      weekEnd,
-      dates,
-      formatDate,
-      prevWeek,
-      nextWeek,
-      isToday,
-      selectDate,
-      submitReservation,
-      resetForm,
-      unscheduledEvents,
-      addToUnscheduled,
-      removeUnscheduledEvent,
-      onDragStart,
-      getRoomName,
-      onDrop,
-      getEventsForDate,
-      getEventsForDateAndRoom,
-      showDatePicker,
-      selectedDate,
-      onDateSelect,
-      isEditing,
-      editEvent,
-      updateReservation,
-      deleteReservation,
-      cancelEdit,
-      currentTime,
-      exportCalendar,
-      store,
-    }
-  },
+function getStartOfWeek(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  d.setDate(diff)
+  return new Date(d)
 }
+
+function getEndOfWeek(startDate) {
+  const end = new Date(startDate)
+  end.setDate(end.getDate() + 6)
+  return end
+}
+
+function formatDate(date) {
+  if (!date) return ''
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+    }).format(d)
+  } catch (error) {
+    console.error('Erreur de formatage de date:', error)
+    return ''
+  }
+}
+
+function prevWeek() {
+  const newStart = new Date(weekStart.value)
+  newStart.setDate(newStart.getDate() - 7)
+  weekStart.value = newStart
+  weekEnd.value = getEndOfWeek(newStart)
+}
+
+function nextWeek() {
+  const newStart = new Date(weekStart.value)
+  newStart.setDate(newStart.getDate() + 7)
+  weekStart.value = newStart
+  weekEnd.value = getEndOfWeek(newStart)
+}
+
+function isToday(date) {
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
+}
+
+function selectDate(date) {
+  console.log('Date sélectionnée:', date)
+}
+
+function submitReservation() {
+  if (!newReservation.value.roomId) {
+    alert('Veuillez sélectionner une salle')
+    return
+  }
+
+  if (
+    !store.isRoomAvailable(
+      newReservation.value.roomId,
+      weekStart.value,
+      newReservation.value.start,
+      newReservation.value.end
+    )
+  ) {
+    alert("Cette salle n'est pas disponible pour ce créneau")
+    return
+  }
+
+  try {
+    store.addReservation({
+      ...newReservation.value,
+      id: Date.now(),
+      date: weekStart.value,
+    })
+    resetForm()
+  } catch (error) {
+    console.error('Erreur lors de la réservation:', error)
+    alert('Erreur lors de la réservation')
+  }
+}
+
+function resetForm() {
+  newReservation.value = {
+    title: '',
+    date: new Date(),
+    start: '09:00',
+    end: '10:00',
+    description: '',
+    roomId: '',
+  }
+}
+
+async function addToUnscheduled() {
+  if (!newReservation.value.title || !newReservation.value.roomId) {
+    alert('Veuillez remplir au moins le titre et sélectionner une salle')
+    return
+  }
+
+  try {
+    console.log('Données du formulaire:', newReservation.value)
+
+    const reservationData = {
+      title: newReservation.value.title,
+      date: new Date(newReservation.value.date).toISOString().split('T')[0],
+      start: newReservation.value.start,
+      end: newReservation.value.end,
+      description: newReservation.value.description || '',
+      roomId: parseInt(newReservation.value.roomId),
+    }
+
+    console.log('Données formatées:', reservationData)
+
+    await store.addReservation(reservationData)
+    console.log('Réservation ajoutée avec succès')
+    resetForm()
+  } catch (error) {
+    console.error('Erreur détaillée:', error)
+    alert(
+      "Erreur lors de l'ajout de la réservation: " +
+        (error.response?.data?.message || error.message)
+    )
+  }
+}
+
+function removeUnscheduledEvent(id) {
+  const index = unscheduledEvents.value.findIndex((e) => e.id === id)
+  if (index !== -1) {
+    unscheduledEvents.value.splice(index, 1)
+    // Supprimer également du store
+    store.deleteReservation(id)
+  }
+}
+
+function onDragStart(event, reservation) {
+  draggedEvent.value = reservation
+  event.dataTransfer.effectAllowed = 'move'
+}
+
+function getRoomName(roomId) {
+  const room = rooms.value.find((r) => r.id === roomId)
+  return room ? room.name : ''
+}
+
+async function onDrop(event, newDate, newRoomId) {
+  if (!draggedEvent.value) return
+
+  try {
+    const updatedReservation = {
+      ...draggedEvent.value,
+      date: newDate.toISOString().split('T')[0],
+      roomId: newRoomId,
+      status: 'pending', // Mettre le statut en attente
+    }
+
+    console.log('Mise à jour de la réservation:', updatedReservation)
+
+    await store.updateReservation(draggedEvent.value.id, updatedReservation)
+    draggedEvent.value = null
+  } catch (error) {
+    console.error('Erreur lors du déplacement:', error)
+    alert('Erreur lors de la mise à jour de la réservation')
+  }
+}
+
+function getEventsForDate(date) {
+  if (!date) return []
+  const events = store.reservations.filter((event) => {
+    const eventDate = new Date(event.date)
+    const compareDate = new Date(date)
+    return (
+      eventDate.getFullYear() === compareDate.getFullYear() &&
+      eventDate.getMonth() === compareDate.getMonth() &&
+      eventDate.getDate() === compareDate.getDate()
+    )
+  })
+  console.log('Events for date:', date, events)
+  return events
+}
+
+function getEventsForDateAndRoom(date, roomId) {
+  const events = getEventsForDate(date).filter(
+    (event) => event.roomId === roomId
+  )
+  console.log('Events for date and room:', date, roomId, events)
+  return events
+}
+
+const showDatePicker = ref(false)
+const selectedDate = ref(new Date())
+
+function onDateSelect(date) {
+  if (!date) return
+
+  try {
+    const selectedDate = new Date(date)
+
+    const day = selectedDate.getDay()
+    const diff = selectedDate.getDate() - day + (day === 0 ? -6 : 1)
+    const monday = new Date(selectedDate.setDate(diff))
+
+    weekStart.value = new Date(monday)
+    weekEnd.value = new Date(monday.setDate(monday.getDate() + 6))
+
+    showDatePicker.value = false
+  } catch (error) {
+    console.error('Erreur lors de la sélection de date:', error)
+  }
+}
+
+async function editEvent(event) {
+  try {
+    isEditing.value = true
+    editingEventId.value = event.id
+
+    // Formatage correct de la date pour l'input type="date"
+    const formattedDate = new Date(event.date).toISOString().split('T')[0]
+
+    newReservation.value = {
+      ...event,
+      date: formattedDate, // Utiliser la date formatée
+    }
+
+    console.log('Édition de la réservation:', newReservation.value)
+  } catch (error) {
+    console.error("Erreur lors de l'édition:", error)
+  }
+}
+
+async function updateReservation() {
+  try {
+    if (!newReservation.value.title || !newReservation.value.roomId) {
+      alert('Veuillez remplir tous les champs requis')
+      return
+    }
+
+    // S'assurer que la date est au bon format
+    const updatedReservation = {
+      ...newReservation.value,
+      id: editingEventId.value,
+      date: new Date(newReservation.value.date).toISOString().split('T')[0],
+      roomId: parseInt(newReservation.value.roomId),
+    }
+
+    console.log('Mise à jour de la réservation:', updatedReservation)
+
+    await store.updateReservation(editingEventId.value, updatedReservation)
+    await store.fetchReservations()
+
+    cancelEdit()
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour:', error)
+    alert('Erreur lors de la mise à jour de la réservation')
+  }
+}
+
+function deleteReservation() {
+  if (confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) {
+    // Supprimer du store
+    store.deleteReservation(editingEventId.value)
+
+    // Supprimer aussi de la liste des événements non planifiés
+    const index = unscheduledEvents.value.findIndex(
+      (e) => e.id === editingEventId.value
+    )
+    if (index !== -1) {
+      unscheduledEvents.value.splice(index, 1)
+    }
+
+    cancelEdit()
+  }
+}
+
+function cancelEdit() {
+  isEditing.value = false
+  editingEventId.value = null
+  resetForm()
+}
+
+const currentTime = ref(new Date().toLocaleTimeString())
+setInterval(() => {
+  currentTime.value = new Date().toDateString()
+}, 1000)
+
+function exportCalendar() {
+  const events = store.reservations
+  let icsContent =
+    'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Your Company//Your Product//EN\n'
+
+  events.forEach((event) => {
+    icsContent += 'BEGIN:VEVENT\n'
+    icsContent += `UID:${event.id}@yourdomain.com\n`
+    icsContent += `DTSTAMP:${
+      new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
+    }Z\n`
+    icsContent += `DTSTART:${new Date(event.date)
+      .toISOString()
+      .split('T')[0]
+      .replace(/-/g, '')}T${event.start.replace(':', '')}00\n`
+    icsContent += `DTEND:${new Date(event.date)
+      .toISOString()
+      .split('T')[0]
+      .replace(/-/g, '')}T${event.end.replace(':', '')}00\n`
+    icsContent += `SUMMARY:${event.title}\n`
+    icsContent += `DESCRIPTION:${event.description}\n`
+    icsContent += 'END:VEVENT\n'
+  })
+
+  icsContent += 'END:VCALENDAR'
+
+  const blob = new Blob([icsContent], { type: 'text/calendar' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = 'calendar.ics'
+  link.click()
+}
+
+onMounted(async () => {
+  try {
+    console.log("Initialisation de l'application")
+    await store.fetchRooms()
+    await store.fetchReservations()
+    store.startPolling() // Démarrer le polling
+    console.log('Polling démarré')
+  } catch (error) {
+    console.error("Erreur lors de l'initialisation:", error)
+  }
+})
+
+onUnmounted(() => {
+  console.log("Nettoyage de l'application")
+  store.stopPolling() // Arrêter le polling
+})
 </script>
 
 <style>
