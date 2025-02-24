@@ -45,14 +45,16 @@ app.MapGet("/api/reservations", async (ApplicationDbContext db) =>
 {
     try
     {
+        Console.WriteLine($"[{DateTime.Now}] Récupération des réservations");
         var reservations = await db.Reservations
             .Include(r => r.Room)
             .ToListAsync();
+        Console.WriteLine($"[{DateTime.Now}] {reservations.Count} réservations trouvées");
         return Results.Ok(reservations);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Erreur lors de la récupération des réservations: {ex.Message}");
+        Console.WriteLine($"[{DateTime.Now}] Erreur: {ex.Message}");
         return Results.Problem(ex.Message);
     }
 });
@@ -61,6 +63,7 @@ app.MapPost("/api/reservations", async (ApplicationDbContext db, Reservation res
 {
     try
     {
+        Console.WriteLine($"[{DateTime.Now}] Nouvelle réservation reçue: {reservation.Title}");
         // Validation des données
         if (string.IsNullOrEmpty(reservation.Title))
             return Results.BadRequest(new { message = "Le titre est requis" });
@@ -86,6 +89,7 @@ app.MapPost("/api/reservations", async (ApplicationDbContext db, Reservation res
 
         db.Reservations.Add(newReservation);
         await db.SaveChangesAsync();
+        Console.WriteLine($"[{DateTime.Now}] Réservation sauvegardée avec l'ID: {newReservation.Id}");
         
         // Charger la salle associée
         await db.Entry(newReservation).Reference(r => r.Room).LoadAsync();
@@ -94,8 +98,8 @@ app.MapPost("/api/reservations", async (ApplicationDbContext db, Reservation res
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Erreur lors de la création de la réservation: {ex.Message}");
-        return Results.BadRequest(new { message = ex.Message });
+        Console.WriteLine($"[{DateTime.Now}] Erreur: {ex.Message}");
+        return Results.Problem(ex.Message);
     }
 });
 
