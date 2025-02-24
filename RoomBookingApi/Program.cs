@@ -16,6 +16,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowVueApp",
         builder => builder
             .WithOrigins("http://localhost:5173")
+            .WithOrigins("http://localhost:5174")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .SetIsOriginAllowed(origin => true)); // Permet toutes les origines en développement
