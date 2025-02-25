@@ -17,15 +17,6 @@ builder.Services.AddSwaggerGen();
 // 🔹 Configuration CORS
 builder.Services.AddCors(options =>
 {
-
-    options.AddPolicy("AllowVueApp", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .SetIsOriginAllowed(origin => true);
-    });
-=======
     options.AddPolicy("AllowVueApp",
         builder => builder
             .WithOrigins("http://localhost:5173")
