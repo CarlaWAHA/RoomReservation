@@ -106,7 +106,7 @@ export const useRoomStore = defineStore('room', {
         })
 
         // Mettre à jour l'état seulement si les données ont changé
-        if (JSON.stringify(this.reservations) !== JSON.stringify(sortedReservations)) {
+        if (!areReservationsEqual(this.reservations, sortedReservations)) {
           console.log('Nouvelles réservations détectées, mise à jour du state')
           this.reservations = sortedReservations
         }
@@ -195,3 +195,14 @@ export const useRoomStore = defineStore('room', {
     }
   }
 })
+
+// Ajoutez une fonction pour comparer les réservations sans utiliser JSON.stringify
+function areReservationsEqual(res1, res2) {
+  if (res1.length !== res2.length) return false
+  for (let i = 0; i < res1.length; i++) {
+    if (res1[i].id !== res2[i].id || res1[i].date !== res2[i].date || res1[i].start !== res2[i].start) {
+      return false
+    }
+  }
+  return true
+}
