@@ -255,7 +255,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoomStore } from '../store'
 import { storeToRefs } from 'pinia'
 import VueDatePicker from '@vuepic/vue-datepicker'
@@ -628,6 +628,15 @@ function exportCalendar() {
 function updateDates() {
   // Logique pour mettre à jour les dates affichées
 }
+
+function adjustEndTime() {
+  const startHour = parseInt(newReservation.value.start.split(':')[0])
+  const endHour = startHour + 2
+  newReservation.value.end = `${endHour.toString().padStart(2, '0')}:00`
+}
+
+// Surveillez les changements de l'heure de début pour ajuster l'heure de fin
+watch(() => newReservation.value.start, adjustEndTime)
 
 onMounted(async () => {
   try {
