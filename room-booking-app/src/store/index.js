@@ -33,30 +33,11 @@ export const useRoomStore = defineStore('room', {
 
     isRoomAvailable: (state) => (roomId, date, start, end, excludeId = null) => {
       const checkDate = new Date(date)
-      console.log('Checking availability for:', {
-        roomId,
-        date: checkDate,
-        start,
-        end,
-        excludeId
-      })
-
       return !state.reservations.some(reservation => {
-        // Ignorer la réservation elle-même lors d'un déplacement
         if (excludeId && reservation.id === excludeId) return false
-
-        // Vérifier si même salle
         if (reservation.roomId !== roomId) return false
 
-        // Vérifier si même date
         const reservationDate = new Date(reservation.date)
-        console.log('Comparing with reservation:', {
-          id: reservation.id,
-          date: reservationDate,
-          start: reservation.start,
-          end: reservation.end
-        })
-
         const sameDate =
           reservationDate.getFullYear() === checkDate.getFullYear() &&
           reservationDate.getMonth() === checkDate.getMonth() &&
@@ -64,16 +45,11 @@ export const useRoomStore = defineStore('room', {
 
         if (!sameDate) return false
 
-        // Vérifier le chevauchement horaire
         const timeOverlap = (
           (start >= reservation.start && start < reservation.end) ||
           (end > reservation.start && end <= reservation.end) ||
           (start <= reservation.start && end >= reservation.end)
         )
-
-        if (timeOverlap) {
-          console.log('Time overlap detected')
-        }
 
         return timeOverlap
       })
