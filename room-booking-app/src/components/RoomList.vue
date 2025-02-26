@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <header>
-      <div class="current-time">Heure actuelle : {{ currentTime }}</div>
+      <div class="current-time">On est le {{ currentDateTime }}</div>
     </header>
     <main>
       <div class="layout">
@@ -49,7 +49,11 @@
             <div class="form-group">
               <label>Heure de début</label>
               <select v-model="newReservation.start" required>
-                <option v-for="hour in availableHours" :key="hour" :value="hour">
+                <option
+                  v-for="hour in availableHours"
+                  :key="hour"
+                  :value="hour"
+                >
                   {{ hour }}
                 </option>
               </select>
@@ -58,7 +62,11 @@
             <div class="form-group">
               <label>Heure de fin</label>
               <select v-model="newReservation.end" required>
-                <option v-for="hour in availableHours" :key="hour" :value="hour">
+                <option
+                  v-for="hour in availableHours"
+                  :key="hour"
+                  :value="hour"
+                >
                   {{ hour }}
                 </option>
               </select>
@@ -80,6 +88,15 @@
                   {{ room.name }} ({{ room.capacity }} pers.)
                 </option>
               </select>
+            </div>
+
+            <div class="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                v-model="newReservation.email"
+                placeholder="Votre adresse mail"
+              />
             </div>
 
             <div class="form-actions">
@@ -111,7 +128,10 @@
           <div class="calendar-navigation">
             <button @click="previousWeek" class="nav-btn">←</button>
             <div class="week-selector" @click="showDatePicker = true">
-              <span>Semaine du {{ formatDate(weekStart) }} au {{ formatDate(weekEnd) }}</span>
+              <span
+                >Semaine du {{ formatDate(weekStart) }} au
+                {{ formatDate(weekEnd) }}</span
+              >
               <VueDatePicker
                 v-if="showDatePicker"
                 v-model="selectedDate"
@@ -156,13 +176,13 @@
                   class="day-column"
                 >
                   <div class="date-number">{{ date.getDate() }}</div>
-                  <div 
-                    v-for="slot in hours" 
+                  <div
+                    v-for="slot in hours"
                     :key="slot"
                     class="room-day-cell"
                     :class="{ 'current-day': isToday(date) }"
                     @dragover.prevent
-                    @drop="onDrop($event, date)"
+                    @drop="onDrop($event, date, slot)"
                   >
                     <div class="events-container">
                       <div
@@ -259,6 +279,8 @@ import { useRoomStore } from '../store'
 import { storeToRefs } from 'pinia'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
+import axios from 'axios'
+import { sendEmail } from '../services/emailService'
 
 const store = useRoomStore()
 const { rooms, reservations, isRoomAvailable } = storeToRefs(store)
@@ -274,6 +296,7 @@ const newReservation = ref({
   end: '10:00',
   description: '',
   roomId: '',
+  email: '',
 })
 
 const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -283,29 +306,28 @@ const weekEnd = ref(getEndOfWeek(weekStart.value))
 const dates = computed(() => {
   const dates = []
   const current = new Date(weekStart.value)
+  current.setHours(0, 0, 0, 0) // Réinitialiser les heures à minuit
 
   for (let i = 0; i < 7; i++) {
-    dates.push(new Date(current))
+    const newDate = new Date(current)
+    dates.push(newDate)
     current.setDate(current.getDate() + 1)
   }
 
   return dates
 })
 
-const hours = [
-  '08:00', '10:00', '12:00', '14:00', '16:00'
-]
+const hours = ['08:00', '10:00', '12:00', '14:00', '16:00']
 
-const availableHours = [
-  '08:00', '10:00', '12:00', '14:00', '16:00'
-]
+const availableHours = ['08:00', '10:00', '12:00', '14:00', '16:00']
 
 function getStartOfWeek(date) {
   const d = new Date(date)
+  d.setHours(0, 0, 0, 0) // Réinitialiser les heures à minuit
   const day = d.getDay()
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
   d.setDate(diff)
-  return new Date(d)
+  return d
 }
 
 function getEndOfWeek(startDate) {
@@ -335,11 +357,11 @@ function formatDateRange(startDate, endDate) {
 }
 
 function previousWeek() {
-  const currentStart = new Date(weekStart.value);
-  currentStart.setDate(currentStart.getDate() - 7);
-  weekStart.value = currentStart;
-  weekEnd.value = new Date(currentStart);
-  weekEnd.value.setDate(weekEnd.value.getDate() + 6);
+  const currentStart = new Date(weekStart.value)
+  currentStart.setDate(currentStart.getDate() - 7)
+  weekStart.value = currentStart
+  weekEnd.value = new Date(currentStart)
+  weekEnd.value.setDate(weekEnd.value.getDate() + 6)
 }
 
 function nextWeek() {
@@ -366,36 +388,64 @@ function isSlotAvailable(date, start, roomId) {
 function resetForm() {
   newReservation.value = {
     title: '',
-    date: '',
-    start: '',
-    end: '',
+    date: new Date(),
+    start: '08:00',
+    end: '10:00',
     description: '',
-    roomId: null
-  };
-  isEditing.value = false;
-  editingEventId.value = null;
+    roomId: '',
+    email: '',
+  }
+  isEditing.value = false
+  editingEventId.value = null
 }
 
 function addToUnscheduled() {
   try {
     // Vérifiez que tous les champs requis sont remplis
-    if (!newReservation.value.title || !newReservation.value.date || !newReservation.value.start || !newReservation.value.end || !newReservation.value.roomId) {
-      alert('Veuillez remplir tous les champs requis');
-      return;
+    if (
+      !newReservation.value.title ||
+      !newReservation.value.date ||
+      !newReservation.value.start ||
+      !newReservation.value.end ||
+      !newReservation.value.roomId
+    ) {
+      alert('Veuillez remplir tous les champs requis')
+      return
+    }
+
+    // Formater la date correctement si c'est un objet Date
+    let dateStr = newReservation.value.date
+    if (dateStr instanceof Date) {
+      const year = dateStr.getFullYear()
+      const month = String(dateStr.getMonth() + 1).padStart(2, '0')
+      const day = String(dateStr.getDate()).padStart(2, '0')
+      dateStr = `${year}-${month}-${day}`
+    }
+
+    const reservationToAdd = {
+      ...newReservation.value,
+      date: dateStr,
     }
 
     // Appeler la fonction pour créer une nouvelle réservation
-    store.addReservation(newReservation.value)
+    store
+      .addReservation(reservationToAdd)
       .then(() => {
-        console.log('Réservation ajoutée avec succès');
-        resetForm(); // Réinitialiser le formulaire après l'ajout
+        console.log('Réservation ajoutée avec succès')
+
+        // Envoyer un email de confirmation si une adresse email est fournie
+        if (newReservation.value.email) {
+          sendConfirmationEmail(reservationToAdd)
+        }
+
+        resetForm() // Réinitialiser le formulaire après l'ajout
       })
-      .catch(error => {
-        console.error('Erreur lors de l\'ajout de la réservation:', error);
-        alert('Erreur lors de l\'ajout de la réservation');
-      });
+      .catch((error) => {
+        console.error("Erreur lors de l'ajout de la réservation:", error)
+        alert("Erreur lors de l'ajout de la réservation")
+      })
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la réservation:', error);
+    console.error("Erreur lors de l'ajout de la réservation:", error)
   }
 }
 
@@ -409,8 +459,8 @@ function removeUnscheduledEvent(id) {
 }
 
 function onDragStart(event, reservation) {
-  draggedEvent.value = reservation;
-  event.dataTransfer.effectAllowed = 'move';
+  draggedEvent.value = reservation
+  event.dataTransfer.effectAllowed = 'move'
 }
 
 function getRoomName(roomId) {
@@ -419,59 +469,91 @@ function getRoomName(roomId) {
 }
 
 function onDragOver(event) {
-  event.preventDefault();
-  event.dataTransfer.dropEffect = 'move';
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
 }
 
-async function onDrop(event, newDate) {
-  if (!draggedEvent.value) return;
+function onDrop(event, date, slot) {
+  event.preventDefault()
+  if (!draggedEvent.value) return
 
-  const roomId = draggedEvent.value.roomId;
-  const start = draggedEvent.value.start;
-  const end = draggedEvent.value.end;
+  // Créer une date sans décalage de fuseau horaire
+  const newDate = new Date(date)
+  newDate.setHours(0, 0, 0, 0) // Réinitialiser les heures à minuit
 
-  // Vérifier la disponibilité de la salle pour la journée entière
-  if (!isRoomAvailable.value(roomId, newDate.toISOString().split('T')[0], start, end, draggedEvent.value.id)) {
-    alert('Cette salle est déjà réservée pour cette journée.');
-    return;
+  // Formater la date au format YYYY-MM-DD sans décalage de fuseau horaire
+  const year = newDate.getFullYear()
+  const month = String(newDate.getMonth() + 1).padStart(2, '0')
+  const day = String(newDate.getDate()).padStart(2, '0')
+  const formattedDate = `${year}-${month}-${day}`
+
+  // Calculer l'heure de fin (2 heures après l'heure de début)
+  const startHour = parseInt(slot.split(':')[0])
+  const endHour = startHour + 2
+  const endTime = `${endHour.toString().padStart(2, '0')}:00`
+
+  const updatedEvent = {
+    ...draggedEvent.value,
+    date: formattedDate,
+    start: slot,
+    end: endTime,
   }
 
-  try {
-    const updatedReservation = {
-      ...draggedEvent.value,
-      date: newDate.toISOString().split('T')[0],
-      status: 'pending', // Mettre le statut en attente
-    };
+  // Mettre à jour la réservation
+  store
+    .updateReservation(draggedEvent.value.id, updatedEvent)
+    .then(() => {
+      // Afficher une alerte de confirmation
+      alert(
+        `La réservation "${updatedEvent.title}" a été déplacée au ${new Date(
+          formattedDate
+        ).toLocaleDateString('fr-FR')} à ${slot}.
+        ${
+          updatedEvent.email
+            ? `Un email de confirmation a été envoyé à ${updatedEvent.email}.`
+            : "Aucun email n'est associé à cette réservation."
+        }`
+      )
 
-    console.log('Mise à jour de la réservation:', updatedReservation);
+      // Envoyer un email de confirmation si l'email est disponible
+      if (updatedEvent.email) {
+        sendConfirmationEmail({
+          ...updatedEvent,
+          title: `${updatedEvent.title} (Modification)`,
+          description: `${
+            updatedEvent.description || ''
+          }\n\nCette réservation a été modifiée par glisser-déposer dans le calendrier.`,
+        })
+      }
 
-    await store.updateReservation(draggedEvent.value.id, updatedReservation);
-    draggedEvent.value = null;
-  } catch (error) {
-    console.error('Erreur lors du déplacement:', error);
-    alert('Erreur lors de la mise à jour de la réservation');
-  }
+      // Réinitialiser l'événement glissé
+      draggedEvent.value = null
+    })
+    .catch((error) => {
+      console.error('Erreur lors de la mise à jour par glisser-déposer:', error)
+      alert('Une erreur est survenue lors du déplacement de la réservation.')
+      draggedEvent.value = null
+    })
 }
 
 function getEventsForDate(date) {
   if (!date) return []
   const events = store.reservations.filter((event) => {
+    // Créer des dates sans les composants de temps pour une comparaison correcte
     const eventDate = new Date(event.date)
+    eventDate.setHours(0, 0, 0, 0)
+
     const compareDate = new Date(date)
-    return (
-      eventDate.getFullYear() === compareDate.getFullYear() &&
-      eventDate.getMonth() === compareDate.getMonth() &&
-      eventDate.getDate() === compareDate.getDate()
-    )
+    compareDate.setHours(0, 0, 0, 0)
+
+    return eventDate.getTime() === compareDate.getTime()
   })
   console.log('Events for date:', date, events)
   return events
 }
 
 function getEventsForDateAndSlot(date, slot) {
-  const events = getEventsForDate(date).filter(
-    (event) => event.start === slot
-  )
+  const events = getEventsForDate(date).filter((event) => event.start === slot)
   console.log('Events for date and slot:', date, slot, events)
   return events
 }
@@ -500,8 +582,8 @@ function onDateSelect(date) {
 
 async function editEvent(event) {
   try {
-    isEditing.value = true;
-    editingEventId.value = event.id;
+    isEditing.value = true
+    editingEventId.value = event.id
 
     // Pré-remplir le formulaire avec les informations de l'événement
     newReservation.value = {
@@ -512,44 +594,65 @@ async function editEvent(event) {
       roomId: event.roomId.toString(), // Convertir en chaîne si nécessaire
       title: event.title,
       description: event.description || '', // Assurez-vous que la description est incluse
-    };
+      email: event.email || '', // Assurez-vous que l'email est inclus
+    }
 
-    console.log('Édition de la réservation:', newReservation.value);
+    console.log('Édition de la réservation:', newReservation.value)
   } catch (error) {
-    console.error("Erreur lors de l'édition:", error);
+    console.error("Erreur lors de l'édition:", error)
   }
 }
 
 async function updateReservation() {
   try {
     if (!newReservation.value.title || !newReservation.value.roomId) {
-      alert('Veuillez remplir tous les champs requis');
-      return;
+      alert('Veuillez remplir tous les champs requis')
+      return
     }
 
     // Vérifier la disponibilité de la salle
-    if (!isSlotAvailable(newReservation.value.date, newReservation.value.start, newReservation.value.roomId)) {
-      alert('Cette salle est déjà réservée pour ce créneau.');
-      return;
+    if (
+      !isSlotAvailable(
+        newReservation.value.date,
+        newReservation.value.start,
+        newReservation.value.roomId
+      )
+    ) {
+      alert('Cette salle est déjà réservée pour ce créneau.')
+      return
     }
 
-    // Assurez-vous que la date est correctement manipulée
+    // Assurez-vous que la date est correctement formatée (YYYY-MM-DD)
+    let dateStr = newReservation.value.date
+    if (dateStr instanceof Date) {
+      const year = dateStr.getFullYear()
+      const month = String(dateStr.getMonth() + 1).padStart(2, '0')
+      const day = String(dateStr.getDate()).padStart(2, '0')
+      dateStr = `${year}-${month}-${day}`
+    }
+
     const updatedReservation = {
       ...newReservation.value,
       id: editingEventId.value,
-      date: new Date(newReservation.value.date).toISOString().split('T')[0],
+      date: dateStr,
       roomId: parseInt(newReservation.value.roomId), // Convertir en nombre si nécessaire
-    };
+    }
 
-    console.log('Mise à jour de la réservation:', updatedReservation);
+    console.log('Mise à jour de la réservation:', updatedReservation)
 
-    await store.updateReservation(editingEventId.value, updatedReservation);
-    await store.fetchReservations();
+    await store.updateReservation(editingEventId.value, updatedReservation)
 
-    resetForm();
+    // Envoyer un email de confirmation si une adresse email est fournie
+    if (newReservation.value.email) {
+      sendConfirmationEmail(updatedReservation)
+    }
+
+    await store.fetchReservations()
+
+    resetForm()
   } catch (error) {
-    console.error('Erreur lors de la mise à jour:', error);
-    alert('Erreur lors de la mise à jour de la réservation');
+    console.error('Erreur lors de la mise à jour:', error)
+    alert('Erreur lors de la mise à jour de la réservation')
   }
 }
 
@@ -576,9 +679,30 @@ function cancelEdit() {
   resetForm()
 }
 
-const currentTime = ref(new Date().toLocaleTimeString())
+const currentDateTime = ref(
+  new Date().toLocaleString('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Europe/Paris',
+  })
+)
+
 setInterval(() => {
-  currentTime.value = new Date().toDateString()
+  currentDateTime.value = new Date().toLocaleString('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Europe/Paris',
+  })
 }, 1000)
 
 function exportCalendar() {
@@ -587,19 +711,25 @@ function exportCalendar() {
     'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Your Company//Your Product//EN\n'
 
   events.forEach((event) => {
+    // Créer une date en préservant le jour exact (sans décalage de fuseau horaire)
+    const eventDate = event.date.split('-')
+    const year = eventDate[0]
+    const month = eventDate[1]
+    const day = eventDate[2]
+
     icsContent += 'BEGIN:VEVENT\n'
     icsContent += `UID:${event.id}@yourdomain.com\n`
     icsContent += `DTSTAMP:${
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
     }Z\n`
-    icsContent += `DTSTART:${new Date(event.date)
-      .toISOString()
-      .split('T')[0]
-      .replace(/-/g, '')}T${event.start.replace(':', '')}00\n`
-    icsContent += `DTEND:${new Date(event.date)
-      .toISOString()
-      .split('T')[0]
-      .replace(/-/g, '')}T${event.end.replace(':', '')}00\n`
+    icsContent += `DTSTART:${year}${month}${day}T${event.start.replace(
+      ':',
+      ''
+    )}00\n`
+    icsContent += `DTEND:${year}${month}${day}T${event.end.replace(
+      ':',
+      ''
+    )}00\n`
     icsContent += `SUMMARY:${event.title}\n`
     icsContent += `DESCRIPTION:${event.description}\n`
     icsContent += 'END:VEVENT\n'
@@ -628,8 +758,8 @@ function adjustEndTime() {
 watch(() => newReservation.value.start, adjustEndTime)
 
 function isSunday(date) {
-  const selectedDate = new Date(date);
-  return selectedDate.getDay() === 0; // 0 correspond à dimanche
+  const selectedDate = new Date(date)
+  return selectedDate.getDay() === 0 // 0 correspond à dimanche
 }
 
 onMounted(async () => {
@@ -648,6 +778,51 @@ onUnmounted(() => {
   console.log("Nettoyage de l'application")
   store.stopPolling() // Arrêter le polling
 })
+
+// Fonction pour envoyer un email de confirmation
+async function sendConfirmationEmail(reservation) {
+  try {
+    if (!reservation.email) return // Ne pas envoyer si pas d'email
+
+    const roomName = getRoomName(reservation.roomId)
+    const formattedDate = new Date(reservation.date).toLocaleDateString('fr-FR')
+
+    // Préparer les données pour l'API d'envoi d'email
+    const emailData = {
+      to: reservation.email,
+      subject: `Confirmation de réservation: ${reservation.title}`,
+      body: `
+        <h2>Confirmation de votre réservation</h2>
+        <p>Bonjour,</p>
+        <p>Votre réservation a été confirmée avec les détails suivants:</p>
+        <ul>
+          <li><strong>Titre:</strong> ${reservation.title}</li>
+          <li><strong>Date:</strong> ${formattedDate}</li>
+          <li><strong>Horaire:</strong> ${reservation.start} - ${
+        reservation.end
+      }</li>
+          <li><strong>Salle:</strong> ${roomName}</li>
+          <li><strong>Description:</strong> ${
+            reservation.description || 'Aucune description'
+          }</li>
+        </ul>
+        <p>Merci d'utiliser notre système de réservation de salles.</p>
+      `,
+    }
+
+    // Appel au service d'envoi d'email
+    try {
+      await sendEmail(emailData)
+      console.log('Email de confirmation envoyé à:', reservation.email)
+      alert(`Un email de confirmation a été envoyé à ${reservation.email}`)
+    } catch (apiError) {
+      console.error("Erreur lors de l'envoi de l'email:", apiError)
+      alert(`Erreur lors de l'envoi de l'email: ${apiError.message}`)
+    }
+  } catch (error) {
+    console.error("Erreur lors de la préparation de l'email:", error)
+  }
+}
 </script>
 
 <style scoped>
@@ -655,7 +830,8 @@ onUnmounted(() => {
   font-family: 'Roboto', sans-serif;
 }
 
-.btn-submit, .btn-add {
+.btn-submit,
+.btn-add {
   background-color: #42b983; /* Vert par défaut */
   color: white;
   border: none;
@@ -665,7 +841,8 @@ onUnmounted(() => {
   transition: background-color 0.3s;
 }
 
-.btn-submit:hover, .btn-add:hover {
+.btn-submit:hover,
+.btn-add:hover {
   background-color: #369f6b; /* Vert foncé */
 }
 
@@ -970,7 +1147,7 @@ input[type='text'] {
 .days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  flex: 1;    
+  flex: 1;
 }
 
 .day-column {
@@ -1081,7 +1258,7 @@ input[type='text'] {
 }
 
 .room-day-cell {
-  cursor: pointer;/* Assurez-vous qu'il y a suffisamment d'espace pour le drop */
+  cursor: pointer; /* Assurez-vous qu'il y a suffisamment d'espace pour le drop */
   border: 1px solid #ddd;
   position: relative;
   min-height: 200px;
