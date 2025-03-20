@@ -6,7 +6,7 @@ const api = axios.create({
     'Accept': 'application/json',
     'Content-Type': 'application/json'
   },
-  withCredentials: false // Désactive les credentials
+  withCredentials: false
 });
 
 // Intercepteur pour gérer les erreurs
@@ -20,6 +20,14 @@ api.interceptors.response.use(
 
 export const getRooms = () => api.get('/rooms');
 export const getReservations = () => api.get('/reservations');
-export const createReservation = (reservation) => api.post('/reservations', reservation);
+export const createReservation = async (reservation) => {
+  try {
+    const response = await api.post('/reservations', reservation);
+    return response;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
 export const updateReservation = (id, reservation) => api.put(`/reservations/${id}`, reservation);
 export const deleteReservation = (id) => api.delete(`/reservations/${id}`); 

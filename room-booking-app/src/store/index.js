@@ -33,30 +33,11 @@ export const useRoomStore = defineStore('room', {
 
     isRoomAvailable: (state) => (roomId, date, start, end, excludeId = null) => {
       const checkDate = new Date(date)
-      console.log('Checking availability for:', {
-        roomId,
-        date: checkDate,
-        start,
-        end,
-        excludeId
-      })
-
       return !state.reservations.some(reservation => {
-        // Ignorer la réservation elle-même lors d'un déplacement
         if (excludeId && reservation.id === excludeId) return false
-
-        // Vérifier si même salle
         if (reservation.roomId !== roomId) return false
 
-        // Vérifier si même date
         const reservationDate = new Date(reservation.date)
-        console.log('Comparing with reservation:', {
-          id: reservation.id,
-          date: reservationDate,
-          start: reservation.start,
-          end: reservation.end
-        })
-
         const sameDate =
           reservationDate.getFullYear() === checkDate.getFullYear() &&
           reservationDate.getMonth() === checkDate.getMonth() &&
@@ -64,16 +45,11 @@ export const useRoomStore = defineStore('room', {
 
         if (!sameDate) return false
 
-        // Vérifier le chevauchement horaire
         const timeOverlap = (
           (start >= reservation.start && start < reservation.end) ||
           (end > reservation.start && end <= reservation.end) ||
           (start <= reservation.start && end >= reservation.end)
         )
-
-        if (timeOverlap) {
-          console.log('Time overlap detected')
-        }
 
         return timeOverlap
       })
@@ -106,7 +82,7 @@ export const useRoomStore = defineStore('room', {
         })
 
         // Mettre à jour l'état seulement si les données ont changé
-        if (JSON.stringify(this.reservations) !== JSON.stringify(sortedReservations)) {
+        if (!areReservationsEqual(this.reservations, sortedReservations)) {
           console.log('Nouvelles réservations détectées, mise à jour du state')
           this.reservations = sortedReservations
         }
@@ -195,3 +171,14 @@ export const useRoomStore = defineStore('room', {
     }
   }
 })
+
+// Ajoutez une fonction pour comparer les réservations sans utiliser JSON.stringify
+function areReservationsEqual(res1, res2) {
+  if (res1.length !== res2.length) return false
+  for (let i = 0; i < res1.length; i++) {
+    if (res1[i].id !== res2[i].id || res1[i].date !== res2[i].date || res1[i].start !== res2[i].start) {
+      return false
+    }
+  }
+  return true
+}
