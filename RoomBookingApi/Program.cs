@@ -27,8 +27,8 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
-    options.UseOpenIddict();
+   options.UseOpenIddict();
+   options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -66,6 +66,8 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 
 await InitializeDatabase(app);
+
+app.MapGet("/", () => "✅ RoomBooking API is up and running!");
 
 app.Run();
 

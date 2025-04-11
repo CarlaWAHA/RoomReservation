@@ -22,10 +22,7 @@ public class Startup
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            // Configure the context to use sqlite.
-            options.UseSqlite($"Filename={Path.Combine(Path.GetTempPath(), "openiddict-imynusoph-server.sqlite3")}");
-
-            // Register the entity sets needed by OpenIddict.
+           // Register the entity sets needed by OpenIddict.
             // Note: use the generic overload if you need
             // to replace the default OpenIddict entities.
             options.UseOpenIddict();
